@@ -1,0 +1,5 @@
+{
+	"visualCrossingApiUrl": "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/",
+	"redisAddress": "localhost:6379",
+	"serverAddress": "localhost:8080"
+}
