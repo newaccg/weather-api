@@ -3,10 +3,14 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
-	"github.com/newaccg/weather-api/internal/handler"
-	"github.com/newaccg/weather-api/internal/service"
+	"github.com/redis/go-redis/v9"
+
 	"github.com/newaccg/weather-api/internal/config"
+	"github.com/newaccg/weather-api/internal/handler"
+	"github.com/newaccg/weather-api/internal/repository"
+	"github.com/newaccg/weather-api/internal/service"
 )
 
 func main() {
@@ -15,7 +19,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	var repo any = nil
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: cfg.RedisAddress,
+		Password: "",
+		DB: 0,
+	})
+
+	repo := repository.NewRepository(redisClient, time.Hour * time.Duration(cfg.ExpirationTime))
 	svc := service.NewService(repo, cfg.ApiUrl, cfg.ApiKey)
 	h := handler.NewHandler(svc)
 

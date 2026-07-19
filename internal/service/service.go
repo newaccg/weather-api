@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"net"
 	"errors"
 	"context"
 	"log"
@@ -14,41 +13,81 @@ import (
 )
 
 type Repository interface{
+	GetWeatherByCity(context.Context, string) ([]byte, error)
+	SetWeatherByCity(context.Context, string, []byte) (error)
 }
 
 type Service struct{
-	ApiUrl string
-	ApiKey string
-	Repo Repository
+	apiUrl string
+	apiKey string
+	repo Repository
 }
 
 func NewService(repo Repository, apiUrl, apiKey string) *Service {
 	return &Service{
-		Repo: repo,
-		ApiUrl: apiUrl,
-		ApiKey: apiKey,
+		repo: repo,
+		apiUrl: apiUrl,
+		apiKey: apiKey,
 	}
 }
 
-func (s *Service) GetWeatherByCity(city string) ([]byte, *errs.Error) {
-	url, err := url.JoinPath(s.ApiUrl, "/", city)
+func (s *Service) GetWeatherByCity(ctx context.Context, city string) ([]byte, *errs.Error) {
+	result, err := s.repo.GetWeatherByCity(ctx, city)
+
+	if err != nil {
+		log.Printf("[ERR] could not get weather from cache: %s", err)
+	} else if result != nil {
+		log.Println("using cache")
+		return result, nil
+	}
+
+	// if result is nil, fetch from third-party API and set to cache
+	log.Println("using third-party API")
+	result, appError := s.fetchWeatherByCity(ctx, city)
+	if appError != nil {
+		return nil, appError
+	}
+
+	err = s.repo.SetWeatherByCity(ctx, city, result)
+	if err != nil {
+		log.Printf("[ERR] could not set weather to cache: %s", err)
+	}
+
+	return result, nil
+}
+
+
+func (s *Service) fetchWeatherByCity(ctx context.Context, city string) ([]byte, *errs.Error) {
+	parsed, err := url.Parse(s.apiUrl)
 	if err != nil {
 		return nil, errs.NewError(
-			fmt.Errorf("could not get valid API URL: %w", err),
-			"bad URl of API or bad city name",
+			fmt.Errorf("could not get valid API URL: %w. Please write the correct URL in the configuration file", err),
+			"Could not get valid URL to third-party API",
+			http.StatusInternalServerError,
+		)
+	}
+
+	parsed = parsed.JoinPath("/", city)
+	path := parsed.String()
+
+	path = fmt.Sprintf("%s?key=%s", path, s.apiKey)
+
+	request, err := http.NewRequestWithContext(ctx, "GET", path, nil)
+	if err != nil {
+		return nil, errs.NewError(
+			fmt.Errorf("could not create GET request: %w", err),
+			"invalid city name",
 			http.StatusBadRequest,
 		)
 	}
 
-	url = fmt.Sprintf("%s?key=%s", url, s.ApiKey)
+	log.Printf("sending GET to %s", path)
 
-	log.Printf("sending GET to %s", url)
-
-	resp, err := http.Get(url)
+	client := &http.Client{}
+	resp, err := client.Do(request)
 	if err != nil {
 		// if we got timeout...
-		var netErr net.Error
-		if errors.Is(err, context.DeadlineExceeded) || errors.As(err, &netErr) && netErr.Timeout() {
+		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			return nil, errs.NewError(
 				fmt.Errorf("third-party API not responding: %w", err),
 				"third-party API not responding",
@@ -59,11 +98,13 @@ func (s *Service) GetWeatherByCity(city string) ([]byte, *errs.Error) {
 		// if not a timeout, it's a different error, return 502
 		return nil, errs.NewError(
 			fmt.Errorf("could not send request to third-party API: %w", err),
-				"could not send request to third-party API",
-				http.StatusBadGateway,
+			"could not send request to third-party API",
+			http.StatusBadGateway,
 		)
 	}
 	defer resp.Body.Close()
+
+	log.Println("got response")
 
 	if resp.StatusCode != 200 {
 		appError := errs.NewError(
@@ -104,4 +145,3 @@ func (s *Service) GetWeatherByCity(city string) ([]byte, *errs.Error) {
 
 	return result, nil
 }
-

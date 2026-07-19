@@ -11,6 +11,7 @@ type Config struct {
 	ServerAddress string `json:"serverAddress"`
 	RedisAddress string `json:"redisAddress"`
 	ApiUrl string `json:"visualCrossingApiUrl"`
+	ExpirationTime int `json:"expirationTimeInHours"`
 	ApiKey string
 }
 

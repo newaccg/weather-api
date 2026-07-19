@@ -1,16 +1,18 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
+	"log"
 	"net/http"
 	"strings"
-	"log"
+	"time"
 
 	errs "github.com/newaccg/weather-api/internal/errors"
 )
 
 type Service interface{
-	GetWeatherByCity(string) ([]byte, *errs.Error)
+	GetWeatherByCity(context.Context, string) ([]byte, *errs.Error)
 }
 
 type handler struct{
@@ -22,7 +24,15 @@ func NewHandler(service Service) *handler {
 }
 
 func (h *handler) RegisterRoutes() {
-	http.HandleFunc("GET /weather/", h.GetWeather)
+	http.HandleFunc("GET /weather/", withTimeout(h.GetWeather, 5 * time.Second))
+}
+
+func withTimeout(handle http.HandlerFunc, timeout time.Duration) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
+		defer cancel()
+		handle(w, r.WithContext(ctx))
+	}
 }
 
 func (h *handler) GetWeather(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +40,7 @@ func (h *handler) GetWeather(w http.ResponseWriter, r *http.Request) {
 	log.Printf("got city: %s", city)
 
 	w.Header().Set("Content-Type", "application/json")
-	weather, err := h.service.GetWeatherByCity(city)
+	weather, err := h.service.GetWeatherByCity(r.Context(), city)
 	if err != nil {
 		log.Printf("[ERR] %s", err.InternalError)
 
