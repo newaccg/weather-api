@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"errors"
 
 	errs "github.com/newaccg/weather-api/internal/errors"
 )
@@ -37,10 +38,23 @@ func withTimeout(handle http.HandlerFunc, timeout time.Duration) http.HandlerFun
 
 func (h *handler) GetWeather(w http.ResponseWriter, r *http.Request) {
 	city := strings.TrimPrefix(r.URL.Path, "/weather/")
-	log.Printf("got city: %s", city)
 
 	w.Header().Set("Content-Type", "application/json")
-	weather, err := h.service.GetWeatherByCity(r.Context(), city)
+
+	var err *errs.Error
+	var weather []byte
+
+	if city == "" {
+		err = errs.NewError(
+			errors.New("got empty city name. Returning 400"),
+			"got empty city name",
+			http.StatusBadRequest,
+		)
+	} else {
+		log.Printf("got city: %s", city)
+		weather, err = h.service.GetWeatherByCity(r.Context(), city)
+	}
+
 	if err != nil {
 		log.Printf("[ERR] %s", err.InternalError)
 
