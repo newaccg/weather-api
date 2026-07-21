@@ -2,5 +2,7 @@
 	"visualCrossingApiUrl": "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/",
 	"redisAddress": "localhost:6379",
 	"serverAddress": "localhost:8080",
-	"expirationTimeInHours": 12
+	"expirationTimeInHours": 12,
+	"timeout": 3,
+	"rateLimitPerMinute": 10
 }

@@ -1,5 +1,11 @@
 package errors
 
+import (
+	"encoding/json"
+	"log"
+	"net/http"
+)
+
 type Error struct{
 	InternalError error
 	ErrorMessage string
@@ -13,3 +19,21 @@ func NewError(internalError error, outputMessage string, httpCode int) *Error {
 		HttpCode: httpCode,
 	}
 }
+
+func WriteError(w http.ResponseWriter, err *Error){
+	w.Header().Set("Content-Type", "application/json")
+
+	log.Printf("[ERR] %s", err.InternalError)
+
+	var js struct {
+		Error string `json:"error"`
+		Code int `json:"code"`
+	}
+
+	js.Error = err.ErrorMessage
+	js.Code = err.HttpCode
+
+	w.WriteHeader(err.HttpCode)
+	json.NewEncoder(w).Encode(js)
+}
+

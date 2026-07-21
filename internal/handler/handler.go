@@ -2,11 +2,9 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"net/http"
 	"strings"
-	"time"
 	"errors"
 
 	errs "github.com/newaccg/weather-api/internal/errors"
@@ -16,30 +14,33 @@ type Service interface{
 	GetWeatherByCity(context.Context, string) ([]byte, *errs.Error)
 }
 
-type handler struct{
-	service Service
+type middleware interface{
+	WithTimeout(http.Handler) http.Handler
+	RateLimit(http.Handler) http.Handler
 }
 
-func NewHandler(service Service) *handler {
-	return &handler{service: service}
+
+type handler struct{
+	service Service
+	midware middleware
+}
+
+func NewHandler(service Service, midware middleware) *handler {
+	return &handler{
+		service: service,
+		midware: midware,
+	}
 }
 
 func (h *handler) RegisterRoutes() {
-	http.HandleFunc("GET /weather/", withTimeout(h.GetWeather, 5 * time.Second))
-}
-
-func withTimeout(handle http.HandlerFunc, timeout time.Duration) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), timeout)
-		defer cancel()
-		handle(w, r.WithContext(ctx))
-	}
+	var hdr http.Handler = http.HandlerFunc(h.GetWeather)
+	hdr = h.midware.RateLimit(hdr)
+	hdr = h.midware.WithTimeout(hdr)
+	http.Handle("GET /weather/", hdr)
 }
 
 func (h *handler) GetWeather(w http.ResponseWriter, r *http.Request) {
 	city := strings.TrimPrefix(r.URL.Path, "/weather/")
-
-	w.Header().Set("Content-Type", "application/json")
 
 	var err *errs.Error
 	var weather []byte
@@ -56,20 +57,9 @@ func (h *handler) GetWeather(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		log.Printf("[ERR] %s", err.InternalError)
-
-		var js struct {
-			Error string `json:"error"`
-			Code int `json:"code"`
-		}
-
-		js.Error = err.ErrorMessage
-		js.Code = err.HttpCode
-
-		w.WriteHeader(err.HttpCode)
-		json.NewEncoder(w).Encode(js)
-		return
+		errs.WriteError(w, err)
 	}
 
+	w.Header().Set("Content-Type", "application/json")
 	w.Write(weather)
 }
