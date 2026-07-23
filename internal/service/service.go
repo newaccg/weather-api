@@ -14,7 +14,8 @@ import (
 
 type Repository interface{
 	GetWeatherByCity(context.Context, string) ([]byte, error)
-	SetWeatherByCity(context.Context, string, []byte) (error)
+	SetWeatherByCity(context.Context, string, []byte) error
+	GetCacheHealth(context.Context) error
 }
 
 type Service struct{
@@ -43,7 +44,7 @@ func (s *Service) GetWeatherByCity(ctx context.Context, city string) ([]byte, *e
 
 	// if result is nil, fetch from third-party API and set to cache
 	log.Println("using third-party API")
-	result, appError := s.fetchWeatherByCity(ctx, city)
+	result, appError := s.fetchDataByCity(ctx, city, "GET")
 	if appError != nil {
 		return nil, appError
 	}
@@ -56,8 +57,26 @@ func (s *Service) GetWeatherByCity(ctx context.Context, city string) ([]byte, *e
 	return result, nil
 }
 
+func (s *Service) GetHealth(ctx context.Context) []string {
+	var unhealthy []string
 
-func (s *Service) fetchWeatherByCity(ctx context.Context, city string) ([]byte, *errs.Error) {
+	err := s.repo.GetCacheHealth(ctx)
+	if err != nil {
+		log.Printf("[ERR] cache check health failed: %s", err)
+		unhealthy = append(unhealthy, "cache")
+	}
+
+	// send HEAD - it returns light response
+	_, appError := s.fetchDataByCity(ctx, "London", "HEAD")
+	if appError != nil {
+		log.Printf("[ERR] third-party API check health failed: %s", appError.InternalError)
+		unhealthy = append(unhealthy, "third-party API")
+	}
+
+	return unhealthy
+}
+
+func (s *Service) fetchDataByCity(ctx context.Context, city string, method string) ([]byte, *errs.Error) {
 	parsed, err := url.Parse(s.apiUrl)
 	if err != nil {
 		return nil, errs.NewError(
@@ -72,16 +91,16 @@ func (s *Service) fetchWeatherByCity(ctx context.Context, city string) ([]byte, 
 
 	path = fmt.Sprintf("%s?key=%s", path, s.apiKey)
 
-	request, err := http.NewRequestWithContext(ctx, "GET", path, nil)
+	log.Printf("sending %s to %s", method, path)
+
+	request, err := http.NewRequestWithContext(ctx, method, path, nil)
 	if err != nil {
 		return nil, errs.NewError(
-			fmt.Errorf("could not create GET request: %w", err),
-			"invalid city name",
-			http.StatusBadRequest,
+			fmt.Errorf("could not form request: %w", err),
+			"internal server error",
+			http.StatusInternalServerError,
 		)
 	}
-
-	log.Printf("sending GET to %s", path)
 
 	client := &http.Client{}
 	resp, err := client.Do(request)

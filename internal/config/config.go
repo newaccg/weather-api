@@ -1,10 +1,13 @@
 package config
+
 import (
-	"os"
 	"encoding/json"
-	"github.com/joho/godotenv"
 	"errors"
 	"fmt"
+	"os"
+	"time"
+
+	"github.com/joho/godotenv"
 )
 
 type Config struct {
@@ -12,9 +15,39 @@ type Config struct {
 	RedisAddress string `json:"redisAddress"`
 	ApiUrl string `json:"visualCrossingApiUrl"`
 	ApiKey string
-	ExpirationTime int `json:"expirationTimeInHours"`
-	Timeout int `json:"timeout"`
-	RateLimitPerMinute int `json:"rateLimitPerMinute"`
+	ExpirationTime Duration `json:"expirationTime"`
+
+	Timeouts Timeouts `json:"timeouts"`
+	RateLimits RateLimitsPerMinute `json:"rateLimitsPerMinute"`
+}
+
+type Timeouts struct {
+	Weather Duration `json:"weather"`
+	Health Duration `json:"health"`
+}
+
+type RateLimitsPerMinute struct {
+	Weather int `json:"weather"`
+}
+
+type Duration struct {
+	time.Duration
+}
+
+func (d *Duration) UnmarshalJSON(bytes []byte) error {
+	var str string
+	err := json.Unmarshal(bytes, &str)
+	if err != nil {
+		return err
+	}
+
+	duration, err := time.ParseDuration(str)
+	if err != nil {
+		return err
+	}
+
+	d.Duration = duration
+	return nil
 }
 
 func LoadConfig() (*Config, error) {

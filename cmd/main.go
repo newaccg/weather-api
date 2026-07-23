@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 
@@ -26,10 +25,10 @@ func main() {
 		DB: 0,
 	})
 
-	repo := repository.NewRepository(rdb, time.Hour * time.Duration(cfg.ExpirationTime))
+	repo := repository.NewRepository(rdb, cfg.ExpirationTime.Duration)
 	svc := service.NewService(repo, cfg.ApiUrl, cfg.ApiKey)
-	midware := middleware.NewMiddleware(rdb, time.Second * time.Duration(cfg.Timeout), cfg.RateLimitPerMinute)
-	h := handler.NewHandler(svc, midware)
+	midware := middleware.NewMiddleware(rdb)
+	h := handler.NewHandler(svc, midware, cfg.Timeouts, cfg.RateLimits)
 
 	h.RegisterRoutes()
 	log.Fatal(http.ListenAndServe(cfg.ServerAddress, nil))

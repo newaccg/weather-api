@@ -16,33 +16,29 @@ import (
 type middleware struct{
 	rdb *redis.Client
 	limiter *redis_rate.Limiter
-	timeout time.Duration
-	rateLimitPerMinute int
 }
 
-func NewMiddleware(client *redis.Client, timeout time.Duration, rateLimitPerMinute int) *middleware {
+func NewMiddleware(client *redis.Client) *middleware {
 	return &middleware{
 		rdb: client,
 		limiter: redis_rate.NewLimiter(client),
-		timeout: timeout,
-		rateLimitPerMinute: rateLimitPerMinute,
 	}
 }
 
-func (m *middleware) WithTimeout(next http.Handler) http.Handler {
+func (m *middleware) WithTimeout(next http.Handler, timeout time.Duration) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), m.timeout)
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
 		defer cancel()
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func (m *middleware) RateLimit(next http.Handler) http.Handler {
+func (m *middleware) WithRateLimit(next http.Handler, limit int) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rKey := fmt.Sprintf("%s:%s", r.RemoteAddr, r.URL.Path)
 		ctx := r.Context()
 
-		res, err := m.limiter.Allow(ctx, rKey, redis_rate.PerMinute(m.rateLimitPerMinute))
+		res, err := m.limiter.Allow(ctx, rKey, redis_rate.PerMinute(limit))
 		if err != nil {
 			errs.WriteError(w, errs.NewError(
 				fmt.Errorf("could not get result from limiter: %w", err),

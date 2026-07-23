@@ -41,3 +41,7 @@ func (r *repository) SetWeatherByCity(ctx context.Context, city string, data []b
 
 	return nil
 }
+
+func (r *repository) GetCacheHealth(ctx context.Context) error {
+	return r.redisClient.Ping(ctx).Err()
+}
