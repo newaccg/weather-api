@@ -95,10 +95,8 @@ func (s *Service) fetchDataByCity(ctx context.Context, city string, method strin
 
 	request, err := http.NewRequestWithContext(ctx, method, path, nil)
 	if err != nil {
-		return nil, errs.NewError(
+		return nil, errs.InternalServerError(
 			fmt.Errorf("could not form request: %w", err),
-			"internal server error",
-			http.StatusInternalServerError,
 		)
 	}
 

@@ -40,10 +40,8 @@ func (m *middleware) WithRateLimit(next http.Handler, limit int) http.Handler {
 
 		res, err := m.limiter.Allow(ctx, rKey, redis_rate.PerMinute(limit))
 		if err != nil {
-			errs.WriteError(w, errs.NewError(
+			errs.WriteError(w, errs.InternalServerError(
 				fmt.Errorf("could not get result from limiter: %w", err),
-				"internal server error",
-				http.StatusInternalServerError,
 			))
 			return
 		}

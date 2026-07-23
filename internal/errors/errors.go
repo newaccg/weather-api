@@ -20,6 +20,14 @@ func NewError(internalError error, outputMessage string, httpCode int) *Error {
 	}
 }
 
+func InternalServerError(err error) *Error {
+	return &Error{
+		InternalError: err,
+		ErrorMessage: "internal server error",
+		HttpCode: http.StatusInternalServerError,
+	}
+}
+
 func WriteError(w http.ResponseWriter, err *Error){
 	w.Header().Set("Content-Type", "application/json")
 
