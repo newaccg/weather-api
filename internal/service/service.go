@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"errors"
 	"context"
-	"log"
+	"log/slog"
 
 	errs "github.com/newaccg/weather-api/internal/errors"
 )
@@ -36,14 +36,17 @@ func (s *Service) GetWeatherByCity(ctx context.Context, city string) ([]byte, *e
 	result, err := s.repo.GetWeatherByCity(ctx, city)
 
 	if err != nil {
-		log.Printf("[ERR] could not get weather from cache: %s", err)
+		slog.Error(
+			"could not get weather from cache",
+			"error", err,
+		)
 	} else if result != nil {
-		log.Println("using cache")
+		slog.Info("using cache")
 		return result, nil
 	}
 
 	// if result is nil, fetch from third-party API and set to cache
-	log.Println("using third-party API")
+	slog.Info("using third-party API")
 	result, appError := s.fetchDataByCity(ctx, city, "GET")
 	if appError != nil {
 		return nil, appError
@@ -51,7 +54,10 @@ func (s *Service) GetWeatherByCity(ctx context.Context, city string) ([]byte, *e
 
 	err = s.repo.SetWeatherByCity(ctx, city, result)
 	if err != nil {
-		log.Printf("[ERR] could not set weather to cache: %s", err)
+		slog.Error(
+			"could not set weather to cache",
+			"error", err,
+		)
 	}
 
 	return result, nil
@@ -62,14 +68,21 @@ func (s *Service) GetHealth(ctx context.Context) []string {
 
 	err := s.repo.GetCacheHealth(ctx)
 	if err != nil {
-		log.Printf("[ERR] cache check health failed: %s", err)
+		slog.Error(
+			"cache check health failed",
+			"error", err,
+		)
+
 		unhealthy = append(unhealthy, "cache")
 	}
 
 	// send HEAD - it returns light response
 	_, appError := s.fetchDataByCity(ctx, "London", "HEAD")
 	if appError != nil {
-		log.Printf("[ERR] third-party API check health failed: %s", appError.InternalError)
+		slog.Error(
+			"third-party API check health failed",
+			"error", appError.InternalError,
+		)
 		unhealthy = append(unhealthy, "third-party API")
 	}
 
@@ -80,7 +93,8 @@ func (s *Service) fetchDataByCity(ctx context.Context, city string, method strin
 	parsed, err := url.Parse(s.apiUrl)
 	if err != nil {
 		return nil, errs.NewError(
-			fmt.Errorf("could not get valid API URL: %w. Please write the correct URL in the configuration file", err),
+			err,
+			"could not get valid API URL. Please write the correct URL in the configuration file",
 			"Could not get valid URL to third-party API",
 			http.StatusInternalServerError,
 		)
@@ -91,12 +105,17 @@ func (s *Service) fetchDataByCity(ctx context.Context, city string, method strin
 
 	path = fmt.Sprintf("%s?key=%s", path, s.apiKey)
 
-	log.Printf("sending %s to %s", method, path)
+	slog.Info(
+		"outcoming request",
+		"method", method,
+		"URL", path,
+	)
 
 	request, err := http.NewRequestWithContext(ctx, method, path, nil)
 	if err != nil {
 		return nil, errs.InternalServerError(
-			fmt.Errorf("could not form request: %w", err),
+			err,
+			"could not form request",
 		)
 	}
 
@@ -106,7 +125,8 @@ func (s *Service) fetchDataByCity(ctx context.Context, city string, method strin
 		// if we got timeout...
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 			return nil, errs.NewError(
-				fmt.Errorf("third-party API not responding: %w", err),
+				err,
+				"third-party API not responding",
 				"third-party API not responding",
 				http.StatusGatewayTimeout,
 			)
@@ -114,18 +134,23 @@ func (s *Service) fetchDataByCity(ctx context.Context, city string, method strin
 
 		// if not a timeout, it's a different error, return 502
 		return nil, errs.NewError(
-			fmt.Errorf("could not send request to third-party API: %w", err),
+			err,
+			"could not send request to third-party API",
 			"could not send request to third-party API",
 			http.StatusBadGateway,
 		)
 	}
 	defer resp.Body.Close()
 
-	log.Println("got response")
+	slog.Info(
+		"got response",
+		"HTTPCode", resp.StatusCode,
+	)
 
 	if resp.StatusCode != 200 {
 		appError := errs.NewError(
-			fmt.Errorf("the third-party API returned non successful code %d", resp.StatusCode),
+			fmt.Errorf("third-party API returned non successful code %d", resp.StatusCode),
+			"third-party API returned non successful code",
 			"",
 			http.StatusBadGateway,
 		)
@@ -154,7 +179,8 @@ func (s *Service) fetchDataByCity(ctx context.Context, city string, method strin
 	result, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errs.NewError(
-			fmt.Errorf("could not read body of API response: %w", err),
+			err,
+			"could not read body of API response",
 			"could not read API response",
 			http.StatusInternalServerError,
 		)

@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/redis/go-redis/v9"
 
@@ -14,6 +16,9 @@ import (
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+    slog.SetDefault(logger)
+
 	cfg, err := config.LoadConfig()
 	if err != nil {
 		log.Fatal(err)

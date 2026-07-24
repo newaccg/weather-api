@@ -87,6 +87,7 @@ func (h *handler) GetWeather(w http.ResponseWriter, r *http.Request) {
 		err = errs.NewError(
 			errors.New("got empty city name. Returning 400"),
 			"got empty city name",
+			"got empty city name",
 			http.StatusBadRequest,
 		)
 	} else {
@@ -96,6 +97,7 @@ func (h *handler) GetWeather(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		errs.WriteError(w, err)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
