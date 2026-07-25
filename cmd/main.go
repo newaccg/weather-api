@@ -8,6 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/newaccg/weather-api/internal/client"
 	"github.com/newaccg/weather-api/internal/config"
 	"github.com/newaccg/weather-api/internal/handler"
 	"github.com/newaccg/weather-api/internal/middleware"
@@ -30,8 +31,10 @@ func main() {
 		DB: 0,
 	})
 
+	httpClient := client.NewMaskClient(cfg.ApiKey, &http.Client{})
+
 	repo := repository.NewRepository(rdb, cfg.ExpirationTime.Duration)
-	svc := service.NewService(repo, cfg.ApiUrl, cfg.ApiKey)
+	svc := service.NewService(repo, cfg.ApiUrl, cfg.ApiKey, httpClient)
 	midware := middleware.NewMiddleware(rdb)
 	h := handler.NewHandler(svc, midware, cfg.Timeouts, cfg.RateLimits)
 

@@ -18,17 +18,23 @@ type Repository interface{
 	GetCacheHealth(context.Context) error
 }
 
+type Client interface{
+	Do(*http.Request) (*http.Response, error)
+}
+
 type Service struct{
 	apiUrl string
 	apiKey string
 	repo Repository
+	client Client
 }
 
-func NewService(repo Repository, apiUrl, apiKey string) *Service {
+func NewService(repo Repository, apiUrl, apiKey string, client Client) *Service {
 	return &Service{
 		repo: repo,
 		apiUrl: apiUrl,
 		apiKey: apiKey,
+		client: client,
 	}
 }
 
@@ -103,13 +109,13 @@ func (s *Service) fetchDataByCity(ctx context.Context, city string, method strin
 	parsed = parsed.JoinPath("/", city)
 	path := parsed.String()
 
-	path = fmt.Sprintf("%s?key=%s", path, s.apiKey)
-
 	slog.Info(
 		"outcoming request",
 		"method", method,
 		"URL", path,
 	)
+
+	path = fmt.Sprintf("%s?key=%s", path, s.apiKey)
 
 	request, err := http.NewRequestWithContext(ctx, method, path, nil)
 	if err != nil {
@@ -119,8 +125,7 @@ func (s *Service) fetchDataByCity(ctx context.Context, city string, method strin
 		)
 	}
 
-	client := &http.Client{}
-	resp, err := client.Do(request)
+	resp, err := s.client.Do(request)
 	if err != nil {
 		// if we got timeout...
 		if errors.Is(ctx.Err(), context.DeadlineExceeded) {
