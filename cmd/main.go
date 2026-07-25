@@ -38,6 +38,11 @@ func main() {
 	midware := middleware.NewMiddleware(rdb)
 	h := handler.NewHandler(svc, midware, cfg.Timeouts, cfg.RateLimits)
 
-	h.RegisterRoutes()
-	log.Fatal(http.ListenAndServe(cfg.ServerAddress, nil))
+	mux := h.RegisterRoutes()
+	server := &http.Server{
+		Addr: cfg.ServerAddress,
+		Handler: mux,
+	}
+
+	log.Fatal(server.ListenAndServe())
 }

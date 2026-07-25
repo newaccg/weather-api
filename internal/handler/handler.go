@@ -40,15 +40,19 @@ func NewHandler(service Service, midware middleware, timeouts config.Timeouts, r
 	}
 }
 
-func (h *handler) RegisterRoutes() {
+func (h *handler) RegisterRoutes() *http.ServeMux {
+	mux := http.NewServeMux()
+
 	var hdr http.Handler = http.HandlerFunc(h.GetWeather)
 	hdr = h.midware.WithRateLimit(hdr, h.rateLimits.Weather)
 	hdr = h.midware.WithTimeout(hdr, h.timeouts.Weather.Duration)
-	http.Handle("GET /weather/", hdr)
+	mux.Handle("GET /weather/", hdr)
 
 	hdr = http.HandlerFunc(h.GetHealth)
 	hdr = h.midware.WithTimeout(hdr, h.timeouts.Health.Duration)
-	http.Handle("GET /health", hdr)
+	mux.Handle("GET /health", hdr)
+
+	return mux
 }
 
 func (h *handler) GetHealth(w http.ResponseWriter, r *http.Request) {
