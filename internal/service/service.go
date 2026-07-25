@@ -162,19 +162,19 @@ func (s *Service) fetchDataByCity(ctx context.Context, city string, method strin
 
 		switch resp.StatusCode {
 		case 400:
-			appError.ErrorMessage = "city not found or invalid or invalid API format"
+			appError.OutputMessage = "city not found or invalid or invalid API format"
 			appError.HttpCode = http.StatusBadRequest
 
 		case 401:
-			appError.ErrorMessage = "your API key is invalid"
+			appError.OutputMessage = "your API key is invalid"
 			appError.HttpCode = http.StatusUnauthorized
 
 		case 404:
-			appError.ErrorMessage = "invalid API format"
+			appError.OutputMessage = "invalid API format"
 			appError.HttpCode = http.StatusBadRequest
 
 		case 429:
-			appError.ErrorMessage = "your account has exceeded the set limits"
+			appError.OutputMessage = "your account has exceeded the set limits"
 			appError.HttpCode = http.StatusTooManyRequests
 		}
 
