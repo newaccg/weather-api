@@ -96,6 +96,8 @@ func (s *Service) GetHealth(ctx context.Context) []string {
 }
 
 func (s *Service) fetchDataByCity(ctx context.Context, city string, method string) ([]byte, *errs.Error) {
+	// forming URL
+
 	parsed, err := url.Parse(s.apiUrl)
 	if err != nil {
 		return nil, errs.NewError(
@@ -106,16 +108,25 @@ func (s *Service) fetchDataByCity(ctx context.Context, city string, method strin
 		)
 	}
 
-	parsed = parsed.JoinPath("/", city)
+	parsed = parsed.JoinPath(city)
+
 	path := parsed.String()
 
+	// logging URL without API key
 	slog.Info(
 		"outcoming request",
 		"method", method,
 		"URL", path,
 	)
 
-	path = fmt.Sprintf("%s?key=%s", path, s.apiKey)
+	// now, adding API key to URL
+	q := parsed.Query()
+	q.Set("key", s.apiKey)
+
+	// writing encoded to URL
+	parsed.RawQuery = q.Encode()
+
+	path = parsed.String()
 
 	request, err := http.NewRequestWithContext(ctx, method, path, nil)
 	if err != nil {
