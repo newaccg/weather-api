@@ -1,15 +1,17 @@
 package service
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
-	"errors"
-	"context"
-	"log/slog"
 
 	errs "github.com/newaccg/weather-api/internal/errors"
+	"github.com/newaccg/weather-api/internal/model"
 )
 
 type Repository interface{
@@ -38,27 +40,27 @@ func NewService(repo Repository, apiUrl, apiKey string, client Client) *Service 
 	}
 }
 
-func (s *Service) GetWeatherByCity(ctx context.Context, city string) ([]byte, *errs.Error) {
-	result, err := s.repo.GetWeatherByCity(ctx, city)
+func (s *Service) GetWeatherByCity(ctx context.Context, city string) (*model.WeatherResponse, *errs.Error) {
+	data, err := s.repo.GetWeatherByCity(ctx, city)
 
 	if err != nil {
 		slog.Error(
 			"could not get weather from cache",
 			"error", err,
 		)
-	} else if result != nil {
+	} else if data != nil {
 		slog.Info("using cache")
-		return result, nil
+		return encodeResponse(data)
 	}
 
 	// if result is nil, fetch from third-party API and set to cache
 	slog.Info("using third-party API")
-	result, appError := s.fetchDataByCity(ctx, city, "GET")
+	data, appError := s.fetchDataByCity(ctx, city, "GET")
 	if appError != nil {
 		return nil, appError
 	}
 
-	err = s.repo.SetWeatherByCity(ctx, city, result)
+	err = s.repo.SetWeatherByCity(ctx, city, data)
 	if err != nil {
 		slog.Error(
 			"could not set weather to cache",
@@ -66,7 +68,7 @@ func (s *Service) GetWeatherByCity(ctx context.Context, city string) ([]byte, *e
 		)
 	}
 
-	return result, nil
+	return encodeResponse(data)
 }
 
 func (s *Service) GetHealth(ctx context.Context) []string {
@@ -93,6 +95,21 @@ func (s *Service) GetHealth(ctx context.Context) []string {
 	}
 
 	return unhealthy
+}
+
+func encodeResponse(data []byte) (*model.WeatherResponse, *errs.Error) {
+	var result *model.WeatherResponse
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return nil, errs.NewError(
+			err,
+			"could not marshal data to response",
+			"got invalid API response",
+			http.StatusBadGateway,
+		)
+	}
+
+	return result, nil
 }
 
 func (s *Service) fetchDataByCity(ctx context.Context, city string, method string) ([]byte, *errs.Error) {

@@ -4,17 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/newaccg/weather-api/internal/config"
 	errs "github.com/newaccg/weather-api/internal/errors"
+	"github.com/newaccg/weather-api/internal/model"
 )
 
 type Service interface{
-	GetWeatherByCity(context.Context, string) ([]byte, *errs.Error)
+	GetWeatherByCity(context.Context, string) (*model.WeatherResponse, *errs.Error)
 	GetHealth(ctx context.Context) []string
 }
 
@@ -85,7 +86,7 @@ func (h *handler) GetWeather(w http.ResponseWriter, r *http.Request) {
 	city := strings.TrimPrefix(r.URL.Path, "/weather/")
 
 	var err *errs.Error
-	var weather []byte
+	var weather *model.WeatherResponse
 
 	if city == "" {
 		err = errs.NewError(
@@ -95,7 +96,10 @@ func (h *handler) GetWeather(w http.ResponseWriter, r *http.Request) {
 			http.StatusBadRequest,
 		)
 	} else {
-		log.Printf("got city: %s", city)
+		slog.Info(
+			"got city",
+			"city", city,
+		)
 		weather, err = h.service.GetWeatherByCity(r.Context(), city)
 	}
 
@@ -105,5 +109,5 @@ func (h *handler) GetWeather(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(weather)
+	json.NewEncoder(w).Encode(weather)
 }
