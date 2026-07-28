@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 
 	errs "github.com/newaccg/weather-api/internal/errors"
 	"github.com/newaccg/weather-api/internal/model"
@@ -41,6 +42,10 @@ func NewService(repo Repository, apiUrl, apiKey string, client Client) *Service 
 }
 
 func (s *Service) GetWeatherByCity(ctx context.Context, city string) (*model.WeatherResponse, *errs.Error) {
+	// convert string to a single case
+	// so London and london are not different keys for Redis
+	city = strings.ToLower(city)
+
 	data, err := s.repo.GetWeatherByCity(ctx, city)
 
 	if err != nil {
