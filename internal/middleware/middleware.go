@@ -15,14 +15,14 @@ import (
 	errs "github.com/newaccg/weather-api/internal/errors"
 )
 
-type middleware struct{
-	rdb *redis.Client
+type middleware struct {
+	rdb     *redis.Client
 	limiter *redis_rate.Limiter
 }
 
 func NewMiddleware(client *redis.Client) *middleware {
 	return &middleware{
-		rdb: client,
+		rdb:     client,
 		limiter: redis_rate.NewLimiter(client),
 	}
 }

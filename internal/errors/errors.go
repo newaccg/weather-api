@@ -6,32 +6,32 @@ import (
 	"net/http"
 )
 
-type Error struct{
+type Error struct {
 	InternalError error
-	ErrorMessage string
+	ErrorMessage  string
 	OutputMessage string
-	HttpCode int
+	HttpCode      int
 }
 
 func NewError(internalError error, errMessage string, outputMessage string, httpCode int) *Error {
-	return &Error {
+	return &Error{
 		InternalError: internalError,
-		ErrorMessage: errMessage,
+		ErrorMessage:  errMessage,
 		OutputMessage: outputMessage,
-		HttpCode: httpCode,
+		HttpCode:      httpCode,
 	}
 }
 
 func InternalServerError(internalError error, errMessage string) *Error {
 	return &Error{
 		InternalError: internalError,
-		ErrorMessage: errMessage,
+		ErrorMessage:  errMessage,
 		OutputMessage: "internal server error",
-		HttpCode: http.StatusInternalServerError,
+		HttpCode:      http.StatusInternalServerError,
 	}
 }
 
-func WriteError(w http.ResponseWriter, err *Error){
+func WriteError(w http.ResponseWriter, err *Error) {
 	w.Header().Set("Content-Type", "application/json")
 
 	slog.Error(
@@ -42,7 +42,7 @@ func WriteError(w http.ResponseWriter, err *Error){
 
 	var js struct {
 		Error string `json:"error"`
-		Code int `json:"code"`
+		Code  int    `json:"code"`
 	}
 
 	js.Error = err.OutputMessage
@@ -51,4 +51,3 @@ func WriteError(w http.ResponseWriter, err *Error){
 	w.WriteHeader(err.HttpCode)
 	json.NewEncoder(w).Encode(js)
 }
-

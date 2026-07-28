@@ -7,14 +7,14 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-type repository struct{
+type repository struct {
 	expirationTime time.Duration
-	redisClient *redis.Client
+	redisClient    *redis.Client
 }
 
 func NewRepository(client *redis.Client, expiration time.Duration) *repository {
 	return &repository{
-		redisClient: client,
+		redisClient:    client,
 		expirationTime: expiration,
 	}
 }

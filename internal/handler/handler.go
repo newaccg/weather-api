@@ -14,29 +14,28 @@ import (
 	"github.com/newaccg/weather-api/internal/model"
 )
 
-type Service interface{
+type Service interface {
 	GetWeatherByCity(context.Context, string) (*model.WeatherResponse, *errs.Error)
 	GetHealth(ctx context.Context) []string
 }
 
-type middleware interface{
+type middleware interface {
 	WithTimeout(http.Handler, time.Duration) http.Handler
 	WithRateLimit(http.Handler, int) http.Handler
 }
 
-
-type handler struct{
-	service Service
-	midware middleware
-	timeouts config.Timeouts
+type handler struct {
+	service    Service
+	midware    middleware
+	timeouts   config.Timeouts
 	rateLimits config.RateLimitsPerMinute
 }
 
 func NewHandler(service Service, midware middleware, timeouts config.Timeouts, rateLimits config.RateLimitsPerMinute) *handler {
 	return &handler{
-		service: service,
-		midware: midware,
-		timeouts: timeouts,
+		service:    service,
+		midware:    midware,
+		timeouts:   timeouts,
 		rateLimits: rateLimits,
 	}
 }
@@ -60,8 +59,8 @@ func (h *handler) GetHealth(w http.ResponseWriter, r *http.Request) {
 	unhealthy := h.service.GetHealth(r.Context())
 
 	var msg struct {
-		Status string `json:"message"`
-		Code int `json:"code"`
+		Status    string   `json:"message"`
+		Code      int      `json:"code"`
 		Unhealthy []string `json:"unhealthy,omitempty"`
 	}
 

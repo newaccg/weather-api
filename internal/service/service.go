@@ -15,26 +15,26 @@ import (
 	"github.com/newaccg/weather-api/internal/model"
 )
 
-type Repository interface{
+type Repository interface {
 	GetWeatherByCity(context.Context, string) ([]byte, error)
 	SetWeatherByCity(context.Context, string, []byte) error
 	GetCacheHealth(context.Context) error
 }
 
-type Client interface{
+type Client interface {
 	Do(*http.Request) (*http.Response, error)
 }
 
-type Service struct{
+type Service struct {
 	apiUrl string
 	apiKey string
-	repo Repository
+	repo   Repository
 	client Client
 }
 
 func NewService(repo Repository, apiUrl, apiKey string, client Client) *Service {
 	return &Service{
-		repo: repo,
+		repo:   repo,
 		apiUrl: apiUrl,
 		apiKey: apiKey,
 		client: client,

@@ -18,7 +18,7 @@ import (
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-    slog.SetDefault(logger)
+	slog.SetDefault(logger)
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
@@ -26,9 +26,9 @@ func main() {
 	}
 
 	rdb := redis.NewClient(&redis.Options{
-		Addr: cfg.RedisAddress,
+		Addr:     cfg.RedisAddress,
 		Password: "",
-		DB: 0,
+		DB:       0,
 	})
 
 	httpClient := client.NewMaskClient(cfg.ApiKey, &http.Client{})
@@ -40,7 +40,7 @@ func main() {
 
 	mux := h.RegisterRoutes()
 	server := &http.Server{
-		Addr: cfg.ServerAddress,
+		Addr:    cfg.ServerAddress,
 		Handler: mux,
 	}
 

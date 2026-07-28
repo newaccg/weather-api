@@ -11,19 +11,19 @@ import (
 )
 
 type Config struct {
-	ServerAddress string `json:"serverAddress"`
-	RedisAddress string `json:"redisAddress"`
-	ApiUrl string `json:"visualCrossingApiUrl"`
-	ApiKey string
+	ServerAddress  string `json:"serverAddress"`
+	RedisAddress   string `json:"redisAddress"`
+	ApiUrl         string `json:"visualCrossingApiUrl"`
+	ApiKey         string
 	ExpirationTime Duration `json:"expirationTime"`
 
-	Timeouts Timeouts `json:"timeouts"`
+	Timeouts   Timeouts            `json:"timeouts"`
 	RateLimits RateLimitsPerMinute `json:"rateLimitsPerMinute"`
 }
 
 type Timeouts struct {
 	Weather Duration `json:"weather"`
-	Health Duration `json:"health"`
+	Health  Duration `json:"health"`
 }
 
 type RateLimitsPerMinute struct {
@@ -56,8 +56,9 @@ func LoadConfig() (*Config, error) {
 	err := godotenv.Load()
 	if err != nil {
 		return nil,
-		fmt.Errorf("could not load environment variables: %w. Please make sure that the .env file is located in the project root and mathes the .env.example file",
-		err)
+			fmt.Errorf("could not load environment variables: %w. Please make sure that the .env file is located in the project root and mathes the .env.example file",
+				err,
+			)
 	}
 
 	key := os.Getenv("VISUAL_CROSSING_API_KEY")
@@ -79,4 +80,3 @@ func LoadConfig() (*Config, error) {
 
 	return config, nil
 }
-
