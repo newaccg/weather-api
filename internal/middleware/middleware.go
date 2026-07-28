@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
+	"net"
 	"net/http"
 	"time"
 
@@ -35,7 +37,19 @@ func (m *middleware) WithTimeout(next http.Handler, timeout time.Duration) http.
 
 func (m *middleware) WithRateLimit(next http.Handler, limit int) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		rKey := fmt.Sprintf("%s:%s", r.RemoteAddr, r.URL.Path)
+		// get clean IP without port
+		ip, _, err := net.SplitHostPort(r.RemoteAddr)
+		if err != nil {
+			slog.Error(
+				"could not get IP",
+				"error", err,
+			)
+
+			// if error, we have to get full address :(
+			ip = r.RemoteAddr
+		}
+
+		rKey := fmt.Sprintf("rateLimit: %s", ip)
 		ctx := r.Context()
 
 		res, err := m.limiter.Allow(ctx, rKey, redis_rate.PerMinute(limit))
