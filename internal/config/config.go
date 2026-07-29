@@ -11,10 +11,14 @@ import (
 )
 
 type Config struct {
-	ServerAddress  string `json:"serverAddress"`
-	RedisAddress   string `json:"redisAddress"`
-	ApiUrl         string `json:"visualCrossingApiUrl"`
-	ApiKey         string
+	ApiKey        string
+	RedisPassword string
+
+	RedisDatabaseNumber int    `json:"RedisDatabaseNumber"`
+	RedisAddress        string `json:"redisAddress"`
+
+	ServerAddress  string   `json:"serverAddress"`
+	ApiUrl         string   `json:"visualCrossingApiUrl"`
 	ExpirationTime Duration `json:"expirationTime"`
 
 	Timeouts   Timeouts            `json:"timeouts"`
@@ -50,7 +54,7 @@ func (d *Duration) UnmarshalJSON(bytes []byte) error {
 	return nil
 }
 
-func LoadConfig() (*Config, error) {
+func LoadConfig(configPath string) (*Config, error) {
 	var config *Config
 
 	err := godotenv.Load()
@@ -61,12 +65,7 @@ func LoadConfig() (*Config, error) {
 			)
 	}
 
-	key := os.Getenv("VISUAL_CROSSING_API_KEY")
-	if key == "" {
-		return nil, errors.New("Visual Crossing API key is not specified")
-	}
-
-	js, err := os.ReadFile("internal/config/config.json")
+	js, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("could not read config.json: %w", err)
 	}
@@ -76,7 +75,12 @@ func LoadConfig() (*Config, error) {
 		return nil, fmt.Errorf("could not parse config.json: %w", err)
 	}
 
-	config.ApiKey = key
+	config.ApiKey = os.Getenv("VISUAL_CROSSING_API_KEY")
+	if config.ApiKey == "" {
+		return nil, errors.New("Visual Crossing API key is not specified")
+	}
+
+	config.RedisPassword = os.Getenv("DB_PASSWORD")
 
 	return config, nil
 }

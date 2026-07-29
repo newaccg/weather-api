@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -20,15 +19,20 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	cfg, err := config.LoadConfig()
+	cfg, err := config.LoadConfig("internal/config/config.json")
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(
+			"could not load config",
+			"error", err,
+		)
+
+		os.Exit(1)
 	}
 
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     cfg.RedisAddress,
-		Password: "",
-		DB:       0,
+		Password: cfg.RedisPassword,
+		DB:       cfg.RedisDatabaseNumber,
 	})
 
 	httpClient := client.NewMaskClient(cfg.ApiKey, &http.Client{})
@@ -44,5 +48,8 @@ func main() {
 		Handler: mux,
 	}
 
-	log.Fatal(server.ListenAndServe())
+	slog.Error(
+		"server error",
+		"error", server.ListenAndServe(),
+	)
 }

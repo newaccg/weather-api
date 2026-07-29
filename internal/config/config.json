@@ -1,8 +1,10 @@
 {
 	"visualCrossingApiUrl": "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/",
 	"redisAddress": "localhost:6379",
+	"redisDataBaseNumber": 0,
 	"serverAddress": "localhost:8080",
 	"expirationTime": "12h",
+
 	"timeouts": {
 		"weather": "5s",
 		"health": "3s"
