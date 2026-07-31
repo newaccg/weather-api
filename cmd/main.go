@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/redis/go-redis/v9"
-
 	"github.com/newaccg/weather-api/internal/client"
 	"github.com/newaccg/weather-api/internal/config"
 	"github.com/newaccg/weather-api/internal/handler"
@@ -29,17 +27,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.RedisAddress,
-		Password: cfg.RedisPassword,
-		DB:       cfg.RedisDatabaseNumber,
-	})
-
 	httpClient := client.NewMaskClient(cfg.ApiKey, &http.Client{})
 
-	repo := repository.NewRepository(rdb, cfg.ExpirationTime.Duration)
+	repo := repository.NewRepository(&cfg.DB)
 	svc := service.NewService(repo, cfg.ApiUrl, cfg.ApiKey, httpClient)
-	midware := middleware.NewMiddleware(rdb)
+	midware := middleware.NewMiddleware(repo)
 	h := handler.NewHandler(svc, midware, cfg.Timeouts, cfg.RateLimits)
 
 	mux := h.RegisterRoutes()

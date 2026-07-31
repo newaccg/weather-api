@@ -10,20 +10,20 @@ import (
 	"time"
 
 	"github.com/go-redis/redis_rate/v10"
-	"github.com/redis/go-redis/v9"
-
 	errs "github.com/newaccg/weather-api/internal/errors"
 )
 
-type middleware struct {
-	rdb     *redis.Client
-	limiter *redis_rate.Limiter
+type repoLimiter interface {
+	AllowRequest(context.Context, string, int) (*redis_rate.Result, error)
 }
 
-func NewMiddleware(client *redis.Client) *middleware {
+type middleware struct {
+	repo repoLimiter
+}
+
+func NewMiddleware(repo repoLimiter) *middleware {
 	return &middleware{
-		rdb:     client,
-		limiter: redis_rate.NewLimiter(client),
+		repo: repo,
 	}
 }
 
@@ -52,7 +52,7 @@ func (m *middleware) WithRateLimit(next http.Handler, limit int) http.Handler {
 		rKey := fmt.Sprintf("rateLimit: %s", ip)
 		ctx := r.Context()
 
-		res, err := m.limiter.Allow(ctx, rKey, redis_rate.PerMinute(limit))
+		res, err := m.repo.AllowRequest(ctx, rKey, limit)
 		if err != nil {
 			errs.WriteError(w, errs.InternalServerError(
 				err,

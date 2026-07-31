@@ -11,18 +11,22 @@ import (
 )
 
 type Config struct {
-	ApiKey        string
-	RedisPassword string
+	ApiKey string
 
-	RedisDatabaseNumber int    `json:"RedisDatabaseNumber"`
-	RedisAddress        string `json:"redisAddress"`
-
-	ServerAddress  string   `json:"serverAddress"`
-	ApiUrl         string   `json:"visualCrossingApiUrl"`
-	ExpirationTime Duration `json:"expirationTime"`
+	ServerAddress string `json:"serverAddress"`
+	ApiUrl        string `json:"visualCrossingApiUrl"`
 
 	Timeouts   Timeouts            `json:"timeouts"`
 	RateLimits RateLimitsPerMinute `json:"rateLimitsPerMinute"`
+	DB         DBConfig            `json:"database"`
+}
+
+type DBConfig struct {
+	Password string
+
+	KeyExpirationTime Duration `json:"keyExpirationTime"`
+	Address           string   `json:"address"`
+	DatabaseNumber    int      `json:"databaseNumber"`
 }
 
 type Timeouts struct {
@@ -80,7 +84,7 @@ func LoadConfig(configPath string) (*Config, error) {
 		return nil, errors.New("Visual Crossing API key is not specified")
 	}
 
-	config.RedisPassword = os.Getenv("DB_PASSWORD")
+	config.DB.Password = os.Getenv("DB_PASSWORD")
 
 	return config, nil
 }
