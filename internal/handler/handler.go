@@ -49,6 +49,7 @@ func (h *handler) RegisterRoutes() *http.ServeMux {
 	mux.Handle("GET /weather/", hdr)
 
 	hdr = http.HandlerFunc(h.GetHealth)
+	hdr = h.midware.WithRateLimit(hdr, h.rateLimits.Health)
 	hdr = h.midware.WithTimeout(hdr, h.timeouts.Health.Duration)
 	mux.Handle("GET /health", hdr)
 

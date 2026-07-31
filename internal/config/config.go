@@ -36,6 +36,7 @@ type Timeouts struct {
 
 type RateLimitsPerMinute struct {
 	Weather int `json:"weather"`
+	Health  int `json:"health"`
 }
 
 type Duration struct {

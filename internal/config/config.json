@@ -14,6 +14,7 @@
 	},
 
 	"rateLimitsPerMinute": {
-		"weather": 10
+		"weather": 10,
+		"health": 5
 	}
 }
