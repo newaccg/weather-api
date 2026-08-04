@@ -6,7 +6,6 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/newaccg/weather-api/internal/config"
@@ -46,7 +45,7 @@ func (h *handler) RegisterRoutes() *http.ServeMux {
 	var hdr http.Handler = http.HandlerFunc(h.GetWeather)
 	hdr = h.midware.WithRateLimit(hdr, h.rateLimits.Weather)
 	hdr = h.midware.WithTimeout(hdr, h.timeouts.Weather.Duration)
-	mux.Handle("GET /weather/", hdr)
+	mux.Handle("GET /weather/{city}", hdr)
 
 	hdr = http.HandlerFunc(h.GetHealth)
 	hdr = h.midware.WithRateLimit(hdr, h.rateLimits.Health)
@@ -83,7 +82,7 @@ func (h *handler) GetHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) GetWeather(w http.ResponseWriter, r *http.Request) {
-	city := strings.TrimPrefix(r.URL.Path, "/weather/")
+	city := r.PathValue("city")
 
 	var err *errs.Error
 	var weather *model.WeatherResponse
